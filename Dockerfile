@@ -1,24 +1,15 @@
-# Use a base image que suporta systemd
+# Use a base image that supports systemd, for example, Ubuntu
 FROM ubuntu:20.04
 
-# Instalar pacotes necessários
+# Install necessary packages
 RUN apt-get update && \
-    apt-get install -y shellinabox openssh-server systemd && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Criar e definir senha do root
+apt-get install -y shellinabox && \
+apt-get install -y systemd && \
+apt-get clean && \
+rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 RUN echo 'root:root' | chpasswd
+# Expose the web-based terminal port
+EXPOSE 4200
 
-# Permitir login via SSH para o root
-RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
-    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
-
-# Criar diretório para o SSH
-RUN mkdir -p /run/sshd
-
-# Expor portas
-EXPOSE 4200 22
-
-# Iniciar serviços
-CMD ["/bin/bash", "-c", "service ssh start && /usr/bin/shellinaboxd -t -s /:LOGIN"]
+# Start shellinabox
+CMD ["/usr/bin/shellinaboxd", "-t", "-s", "/:LOGIN"]
