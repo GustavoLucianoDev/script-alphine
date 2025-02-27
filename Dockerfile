@@ -1,36 +1,38 @@
-# Use uma imagem base que suporte systemd
-FROM ubuntu:20.04
+# Usa a imagem mais recente do Ubuntu
+FROM ubuntu:latest
 
-# Define o fuso horário automaticamente para evitar interação do tzdata
+# Define o fuso horário automaticamente para evitar interação manual
 ENV DEBIAN_FRONTEND=noninteractive
 RUN ln -fs /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime && \
-    echo "America/Sao_Paulo" > /etc/timezone && \
-    apt-get update && \
-    apt-get install -y tzdata
+    echo "America/Sao_Paulo" > /etc/timezone
 
-# Instala pacotes necessários
+# Atualiza pacotes e instala dependências
 RUN apt-get update && \
-    apt-get install -y shellinabox openssh-server curl && \
+    apt-get install -y curl gnupg shellinabox openssh-server npm && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Instala Node.js mais recente
+# Instala a versão mais recente do Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install -y nodejs && \
-    npm install -g localtunnel
+    apt-get install -y nodejs
 
-# Configura senha do root
-RUN echo 'root:root' | chpasswd
+# Configura senha do root como 1234
+RUN echo 'root:1234' | chpasswd
 
-# Configuração do SSH
-RUN mkdir /var/run/sshd && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
+# Configuração do SSH para permitir login com senha
+RUN mkdir /var/run/sshd && \
+    echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && \
+    echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config
 
-# Expõe portas
+# Instala o LocalTunnel globalmente via npm
+RUN npm install -g localtunnel
+
+# Expõe portas necessárias
 EXPOSE 4200 22
 
-# Script de inicialização
+# Comando de inicialização do contêiner
 CMD bash -c "\
-    /usr/sbin/sshd && \
+    service ssh start && \
     shellinaboxd -t -s '/:LOGIN' & \
     lt --port 22 & \
-    wait"
+    tail -f /dev/null"
