@@ -3,7 +3,7 @@ FROM ubuntu:20.04
 
 # Instala pacotes necessários
 RUN apt-get update && \
-    apt-get install -y shellinabox openssh-server curl && \
+    apt-get install -y shellinabox openssh-server curl nodejs npm && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -13,9 +13,8 @@ RUN echo 'root:root' | chpasswd
 # Configuração do SSH
 RUN mkdir /var/run/sshd && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
 
-# Instala o LocalTunnel globalmente
-RUN curl -fsSL https://github.com/localtunnel/localtunnel/raw/master/bin/lt -o /usr/local/bin/lt && \
-    chmod +x /usr/local/bin/lt
+# Instala o LocalTunnel via npm
+RUN npm install -g localtunnel
 
 # Expõe portas
 EXPOSE 4200 22
