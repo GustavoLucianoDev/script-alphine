@@ -34,9 +34,9 @@ RUN ssh-keygen -A
 # Expõe portas necessárias
 EXPOSE 4200 22
 
-# Script de inicialização para garantir que tudo está rodando
+# Script de inicialização atualizado
 CMD ["/bin/bash", "-c", "\
     service ssh start && \
     shellinaboxd -t -s '/:LOGIN' & \
-    localtunnel --port 22 & \
+    npx localtunnel --port 22 & \
     tail -f /dev/null"]
