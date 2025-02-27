@@ -1,14 +1,16 @@
-# Use Alpine como base
-FROM alpine:latest
+FROM ubuntu:minimal
 
-# Instalar os pacotes necessários
-RUN apk add --no-cache shellinabox shadow
+# Instalar pacotes necessários
+RUN apt-get update && \
+    apt-get install -y shellinabox && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Definir senha para root
-RUN echo "root:root" | chpasswd
+# Definir senha do root
+RUN echo 'root:root' | chpasswd
 
-# Expor a porta do terminal web
+# Expor a porta do Shellinabox
 EXPOSE 4200
 
-# Iniciar o Shellinabox
-CMD ["shellinaboxd", "-t", "-s", "/:LOGIN"]
+# Iniciar Shellinabox
+CMD ["/usr/bin/shellinaboxd", "-t", "-s", "/:LOGIN"]
