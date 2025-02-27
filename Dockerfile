@@ -42,5 +42,6 @@ EXPOSE 4200 22
 CMD ["/bin/bash", "-c", "\
     service ssh start && \
     shellinaboxd -t -s '/:LOGIN' & \
-    npx localtunnel --port 22 & \
-    tail -f /dev/null"]
+    npx localtunnel --port 22 --print-requests > /tmp/lt_url.txt 2>&1 & \
+    sleep 5 && cat /tmp/lt_url.txt && \
+    tail -f /tmp/lt_url.txt"]
