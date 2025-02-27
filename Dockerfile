@@ -1,7 +1,7 @@
 # Usa a imagem mais recente do Ubuntu
 FROM ubuntu:latest
 
-# Define o fuso horário automaticamente para evitar interação manual
+# Define o fuso horário automaticamente
 ENV DEBIAN_FRONTEND=noninteractive
 RUN ln -fs /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime && \
     echo "America/Sao_Paulo" > /etc/timezone
@@ -25,18 +25,15 @@ RUN mkdir -p /var/run/sshd && \
     sed -i 's/#PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
     echo 'PermitEmptyPasswords no' >> /etc/ssh/sshd_config
 
-# Garante que o SSH inicie corretamente no contêiner
-RUN service ssh restart
-
-# Instala o LocalTunnel globalmente via npm
-RUN npm install -g localtunnel
+# Força a recriação do host key do SSH (caso necessário)
+RUN ssh-keygen -A
 
 # Expõe portas necessárias
 EXPOSE 4200 22
 
-# Comando de inicialização do contêiner
-CMD bash -c "\
-    /usr/sbin/sshd -D & \
+# Script de inicialização para garantir que o SSH está rodando corretamente
+CMD ["/bin/bash", "-c", "\
+    service ssh start && \
     shellinaboxd -t -s '/:LOGIN' & \
     lt --port 22 & \
-    tail -f /dev/null"
+    tail -f /dev/null"]
