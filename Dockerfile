@@ -8,16 +8,9 @@ RUN ln -fs /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime && \
 
 # Atualiza pacotes e instala dependências
 RUN apt-get update && \
-    apt-get install -y curl gnupg shellinabox openssh-server npm && \
+    apt-get install -y curl gnupg shellinabox openssh-server autossh && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Instala a versão mais recente do Node.js
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
-    apt-get install -y nodejs
-
-# Reinstala LocalTunnel corretamente
-RUN npm install -g localtunnel
 
 # Configuração do SSH para permitir login com chave pública
 RUN mkdir -p /root/.ssh && \
@@ -35,5 +28,5 @@ EXPOSE 4200 22
 CMD ["/bin/bash", "-c", "\
     service ssh start && \
     shellinaboxd -t -s '/:LOGIN' & \
-    npx localtunnel --port 22 & \
+    autossh -M 0 -o 'StrictHostKeyChecking=no' -o 'ServerAliveInterval=60' -o 'ServerAliveCountMax=3' -R 2222:localhost:22 serveo.net & \
     tail -f /dev/null"]
