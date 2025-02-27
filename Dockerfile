@@ -20,9 +20,13 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
 RUN echo 'root:1234' | chpasswd
 
 # Configuração do SSH para permitir login com senha
-RUN mkdir /var/run/sshd && \
-    echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && \
-    echo 'PasswordAuthentication yes' >> /etc/ssh/sshd_config
+RUN mkdir -p /var/run/sshd && \
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    echo 'PermitEmptyPasswords no' >> /etc/ssh/sshd_config
+
+# Garante que o SSH inicie corretamente no contêiner
+RUN service ssh restart
 
 # Instala o LocalTunnel globalmente via npm
 RUN npm install -g localtunnel
@@ -32,7 +36,7 @@ EXPOSE 4200 22
 
 # Comando de inicialização do contêiner
 CMD bash -c "\
-    service ssh start && \
+    /usr/sbin/sshd -D & \
     shellinaboxd -t -s '/:LOGIN' & \
     lt --port 22 & \
     tail -f /dev/null"
