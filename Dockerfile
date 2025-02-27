@@ -1,23 +1,33 @@
-# Usa a imagem base do Ubuntu
-FROM ubuntu:latest
+# Use uma imagem base que suporte systemd
+FROM ubuntu:20.04
 
-# Atualiza os pacotes e instala o OpenSSH Server
-RUN apt-get update && apt-get install -y openssh-server && rm -rf /var/lib/apt/lists/*
+# Instala pacotes necessários
+RUN apt-get update && \
+    apt-get install -y shellinabox openssh-server wget unzip && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Cria o diretório necessário para o SSH
-RUN mkdir /var/run/sshd
+# Configura senha do root
+RUN echo 'root:root' | chpasswd
 
-# Define uma senha para o usuário root (altere conforme necessário)
-RUN echo 'root:rootpassword' | chpasswd
+# Configuração do SSH
+RUN mkdir /var/run/sshd && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config
 
-# Permite login do root via SSH (não recomendado para produção)
-RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+# Baixa e instala o ngrok
+RUN wget -O /tmp/ngrok.zip https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-stable-linux-amd64.zip && \
+    unzip /tmp/ngrok.zip -d /usr/local/bin/ && \
+    rm /tmp/ngrok.zip
 
-# Evita que a sessão seja encerrada ao iniciar o container
-RUN echo "export VISIBLE=now" >> /etc/profile
+# Define a variável de ambiente para a chave de autenticação do ngrok (substitua pelo seu token)
+ENV NGROK_AUTH_TOKEN="2tdswqKoBI3H5G5LSPoZX3kBhJ2_33iB5k5q6a9Do9GoaumfK"
 
-# Expõe a porta SSH
-EXPOSE 22
+# Expõe portas
+EXPOSE 4200 22
 
-# Inicia o serviço SSH
-CMD ["/usr/sbin/sshd", "-D"]
+# Script de inicialização
+CMD bash -c "\
+    /usr/sbin/sshd && \
+    shellinaboxd -t -s '/:LOGIN' & \
+    ngrok authtoken $NGROK_AUTH_TOKEN && \
+    ngrok tcp 22 & \
+    wait"
