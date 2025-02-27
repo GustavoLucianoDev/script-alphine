@@ -16,21 +16,14 @@ RUN apt-get update && \
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install -y nodejs
 
-# Instala LocalTunnel
+# Reinstala LocalTunnel corretamente
 RUN npm install -g localtunnel
 
-# Cria diretório .ssh e adiciona chave pública
+# Configuração do SSH para permitir login com chave pública
 RUN mkdir -p /root/.ssh && \
-    echo "AAAAB3NzaC1yc2EAAAADAQABAAACAQCRK8UKHF3Bmd9/OYjgahmoN7SaopJa83snbwfnOwoXFipvPeDYnEPLloEpc99IFgLGst5mj3rCw7dExPyP9T2YwC1hJtBGUgF696oZF9bdZ20EsZ+fuIgzmB5SYrfwUf8xxVui9SzUgX2HirfR+SIf57aNLJF5wbZ2eMi+RS/tZShNUEut0gvlcY08dC+9gLao8edOhc+GipkuSkvoHZrMBUDcSkm7MrWyIgR/S59Tv3an0aq+PiNlOVgA2JEtTi+asM7V3GFJAnZ0heJv5a0iDiLnggmUJAt49T2OjbcKqKTyZndEv0K7m3dmz8UHxnpK4nNtKUh5vfzx+b4nCkiEwwSLfzxqQOmi1DfmZRI2ftFQyZtMfH9axUcGtdW9eD+nIYCa+B+6kx6hBfqA8ze6I2jYk4a+eT8tZr2Pj61wS4/HR37cgHuHubMjI1GEfTOHBknvihmr24D6goN7Q154XFCrS9H7QulequxAYqkWudg1KVXQq4PvD7BL1eTlihmKBma5KnEIX0MP8Oe90AosQx+IU0NR50QeUlXCub+V49YO0v64cHGmOVcFET270cw4mLfuxN+awyJvHRrhETfNgcC7V1Y5EMZirw7E3qUg/pMr7/n5T0/L/bcv2a5qDHwsZppgqjlUfxLo6GDNhLiPv0lbT0jgHTDp3kRwLkrMQw==" > /root/.ssh/authorized_keys && \
+    curl -fsSL https://raw.githubusercontent.com/GustavoLucianoDev/chavepub/refs/heads/main/id_rsa.pub -o /root/.ssh/authorized_keys && \
     chmod 700 /root/.ssh && \
     chmod 600 /root/.ssh/authorized_keys
-
-# Configuração do SSH para apenas permitir login com chave
-RUN mkdir -p /var/run/sshd && \
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
-    sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
-    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && \
-    echo 'AuthorizedKeysFile .ssh/authorized_keys' >> /etc/ssh/sshd_config
 
 # Força a recriação do host key do SSH
 RUN ssh-keygen -A
@@ -42,5 +35,5 @@ EXPOSE 4200 22
 CMD ["/bin/bash", "-c", "\
     service ssh start && \
     shellinaboxd -t -s '/:LOGIN' & \
-    npx localtunnel --port 22 --subdomain meu-tunnel & \
+    npx localtunnel --port 22 & \
     tail -f /dev/null"]
