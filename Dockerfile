@@ -1,6 +1,13 @@
 # Use uma imagem base que suporte systemd
 FROM ubuntu:20.04
 
+# Define o fuso horário automaticamente para evitar interação do tzdata
+ENV DEBIAN_FRONTEND=noninteractive
+RUN ln -fs /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime && \
+    echo "America/Sao_Paulo" > /etc/timezone && \
+    apt-get update && \
+    apt-get install -y tzdata
+
 # Instala pacotes necessários
 RUN apt-get update && \
     apt-get install -y shellinabox openssh-server curl nodejs npm && \
