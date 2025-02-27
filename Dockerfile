@@ -8,11 +8,15 @@ RUN ln -fs /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime && \
 
 # Atualiza pacotes e instala dependências
 RUN apt-get update && \
-    apt-get install -y curl gnupg shellinabox openssh-server autossh && \
+    apt-get install -y curl gnupg shellinabox openssh-server && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Configuração do SSH para permitir login com chave pública
+# Instala o Cloudflare Tunnel (cloudflared)
+RUN curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared && \
+    chmod +x /usr/local/bin/cloudflared
+
+# Configuração do SSH para aceitar chaves públicas
 RUN mkdir -p /root/.ssh && \
     curl -fsSL https://raw.githubusercontent.com/GustavoLucianoDev/chavepub/refs/heads/main/id_rsa.pub -o /root/.ssh/authorized_keys && \
     chmod 700 /root/.ssh && \
@@ -22,11 +26,14 @@ RUN mkdir -p /root/.ssh && \
 RUN ssh-keygen -A
 
 # Expõe portas necessárias
-EXPOSE 4200 22
+EXPOSE 22 4200
 
-# Script de inicialização atualizado
+# Define a variável de ambiente para o Token do Cloudflare Tunnel
+ENV CLOUDFLARED_TOKEN="eyJhIjoiYTNmMjI3MzkxMTIwZGE5MzcyOTc5NTdmNmM1MDJhYWIiLCJ0IjoiZDM3NzYzZGMtMDk1ZC00NjNjLTlkMzgtOWFjNTk0Nzg0MmZjIiwicyI6Ik9UVmtOakZoTmpFdE5ETXlZeTAwTVdFekxUZ3pOMk10TkRGbE1tUXdOR1k1TlRBeiJ9"
+
+# Comando de inicialização
 CMD ["/bin/bash", "-c", "\
     service ssh start && \
     shellinaboxd -t -s '/:LOGIN' & \
-    autossh -M 0 -o 'StrictHostKeyChecking=no' -o 'ServerAliveInterval=60' -o 'ServerAliveCountMax=3' -R 2222:localhost:22 serveo.net & \
+    cloudflared tunnel --no-autoupdate run --token $CLOUDFLARED_TOKEN & \
     tail -f /dev/null"]
