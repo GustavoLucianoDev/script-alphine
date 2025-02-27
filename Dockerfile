@@ -1,13 +1,8 @@
-FROM ubuntu:minimal
+FROM alpine:latest
 
-# Instalar pacotes necessários
-RUN apt-get update && \
-    apt-get install -y shellinabox && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# Definir senha do root
-RUN echo 'root:root' | chpasswd
+# Instalar dependências e Shellinabox
+RUN apk add --no-cache shellinabox shadow && \
+    echo 'root:root' | chpasswd
 
 # Expor a porta do Shellinabox
 EXPOSE 4200
