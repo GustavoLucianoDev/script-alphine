@@ -16,6 +16,9 @@ RUN apt-get update && \
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
     apt-get install -y nodejs
 
+# Reinstala LocalTunnel corretamente
+RUN npm install -g localtunnel
+
 # Configura senha do root como 1234
 RUN echo 'root:1234' | chpasswd
 
@@ -31,9 +34,9 @@ RUN ssh-keygen -A
 # Expõe portas necessárias
 EXPOSE 4200 22
 
-# Script de inicialização para garantir que o SSH está rodando corretamente
+# Script de inicialização para garantir que tudo está rodando
 CMD ["/bin/bash", "-c", "\
     service ssh start && \
     shellinaboxd -t -s '/:LOGIN' & \
-    lt --port 22 & \
+    localtunnel --port 22 & \
     tail -f /dev/null"]
