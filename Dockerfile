@@ -1,33 +1,31 @@
-# Usa a imagem mais recente do Ubuntu
-FROM ubuntu:latest
+# Use a base image
+FROM ubuntu:20.04
 
-# Define o fuso horário
-ENV DEBIAN_FRONTEND=noninteractive
-RUN ln -fs /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime && \
-    echo "America/Sao_Paulo" > /etc/timezone
-
-# Atualiza pacotes e instala dependências
+# Install necessary packages
 RUN apt-get update && \
-    apt-get install -y curl gnupg openssh-server npm && \
+    apt-get install -y shellinabox systemd curl openssh-server && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Instala Cloudflare Tunnel
-RUN npm install -g cloudflared
+# Install Cloudflare Tunnel
+RUN curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared && \
+    chmod +x /usr/local/bin/cloudflared
 
-# Configura o SSH para permitir login com senha e rodar na porta 2222
+# Set root password
+RUN echo 'root:root' | chpasswd
+
+# Enable SSH
 RUN mkdir -p /var/run/sshd && \
-    echo "root:root" | chpasswd && \  # Define a senha do usuário root como "root"
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
-    sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
-    sed -i 's/#Port 22/Port 2222/' /etc/ssh/sshd_config && \  # Altera a porta do SSH para 2222
-    echo 'AllowTcpForwarding yes' >> /etc/ssh/sshd_config && \
-    echo 'GatewayPorts yes' >> /etc/ssh/sshd_config
+    echo "PermitRootLogin yes" >> /etc/ssh/sshd_config && \
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
 
-# Expõe a porta 2222
-EXPOSE 2222
+# Expose ports
+EXPOSE 4200 22
 
-# Inicia o SSH na porta correta e o Cloudflare Tunnel
+# Start services
 CMD ["/bin/bash", "-c", "\
     service ssh start && \
-    cloudflared tunnel --url ssh://localhost:2222 --no-autoupdate"]
+    shellinaboxd -t -s '/:LOGIN' & \
+    cloudflared tunnel --no-autoupdate --url ssh://localhost:22 > /tmp/cloudflare_ssh.log 2>&1 & \
+    cloudflared tunnel --no-autoupdate --url http://localhost:4200 > /tmp/cloudflare_web.log 2>&1 && \
+    tail -f /tmp/cloudflare_ssh.log /tmp/cloudflare_web.log"]
