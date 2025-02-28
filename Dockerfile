@@ -1,44 +1,35 @@
-# Use uma imagem base do Ubuntu
+# Usar a imagem base do Ubuntu
 FROM ubuntu:20.04
 
-# Definir porta SSH personalizada
-ARG SSH_PORT=2222
+# Definir modo não interativo para evitar prompts durante a instalação
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Instalar pacotes necessários
+# Instalar pacotes necessários: Nginx, Shellinabox (terminal web), Systemd, e outras dependências
 RUN apt-get update && \
-    apt-get install -y shellinabox systemd curl openssh-server net-tools && \
+    apt-get install -y nginx shellinabox systemd curl iputils-ping && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Instalar o Cloudflare Tunnel
-RUN curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared && \
-    chmod +x /usr/local/bin/cloudflared
+# Criar o arquivo de configuração nginx.conf dentro do container
+RUN echo 'events {} \
+http { \
+    server { \
+        listen 80; \
+        location / { \
+            proxy_pass http://localhost; \
+            proxy_set_header Host $host; \
+            proxy_set_header X-Real-IP $remote_addr; \
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+            proxy_set_header X-Forwarded-Proto $scheme; \
+        } \
+    } \
+}' > /etc/nginx/nginx.conf
 
-# Definir senha para o usuário root
+# Definir senha para o root
 RUN echo 'root:root' | chpasswd
 
-# Configurar SSH (alterando a porta)
-RUN mkdir -p /var/run/sshd && \
-    echo "PermitRootLogin yes" >> /etc/ssh/sshd_config && \
-    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
-    sed -i "s/#Port 22/Port ${SSH_PORT}/" /etc/ssh/sshd_config && \
-    systemctl enable ssh
+# Expor as portas necessárias: 80 (Nginx) e 4200 (Shellinabox)
+EXPOSE 80 4200
 
-# Expor portas necessárias
-EXPOSE 4200 ${SSH_PORT}
-
-# Comando de inicialização
-CMD ["/bin/bash", "-c", "\
-    echo 'Iniciando SSH na porta ${SSH_PORT}...' && \
-    service ssh start && \
-    netstat -tlnp | grep :${SSH_PORT} && \
-    shellinaboxd -t -s '/:LOGIN' & \
-    echo 'Iniciando túnel SSH no Cloudflare...' && \
-    cloudflared tunnel --no-autoupdate --url ssh://localhost:${SSH_PORT} --token eyJhIjoiYTNmMjI3MzkxMTIwZGE5MzcyOTc5NTdmNmM1MDJhYWIiLCJ0IjoiZDM3NzYzZGMtMDk1ZC00NjNjLTlkMzgtOWFjNTk0Nzg0MmZjIiwicyI6Ik9UVmtOakZoTmpFdE5ETXlZeTAwTVdFekxUZ3pOMk10TkRGbE1tUXdOR1k1TlRBeiJ9 > /tmp/cloudflare_ssh.log 2>&1 & \
-    sleep 5 && \
-    cat /tmp/cloudflare_ssh.log && \
-    echo 'Iniciando túnel WebShell no Cloudflare...' && \
-    cloudflared tunnel --no-autoupdate --url http://localhost:4200 > /tmp/cloudflare_web.log 2>&1 & \
-    sleep 5 && \
-    cat /tmp/cloudflare_web.log && \
-    tail -f /tmp/cloudflare_ssh.log /tmp/cloudflare_web.log"]
+# Iniciar o Nginx e o Shellinabox
+CMD ["/bin/bash", "-c", "service nginx start && /usr/bin/shellinaboxd -t -s /:LOGIN"]
