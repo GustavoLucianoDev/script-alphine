@@ -15,18 +15,19 @@ RUN apt-get update && \
 # Instala Cloudflare Tunnel
 RUN npm install -g cloudflared
 
-# Configura o SSH para permitir login com senha
+# Configura o SSH para permitir login com senha e rodar na porta 2222
 RUN mkdir -p /var/run/sshd && \
     echo "root:root" | chpasswd && \  # Define a senha do usuário root como "root"
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
     sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#Port 22/Port 2222/' /etc/ssh/sshd_config && \  # Altera a porta do SSH para 2222
     echo 'AllowTcpForwarding yes' >> /etc/ssh/sshd_config && \
     echo 'GatewayPorts yes' >> /etc/ssh/sshd_config
 
-# Expõe a porta SSH
-EXPOSE 22
+# Expõe a porta 2222
+EXPOSE 2222
 
-# Inicia o SSH e o Cloudflare Tunnel
+# Inicia o SSH na porta correta e o Cloudflare Tunnel
 CMD ["/bin/bash", "-c", "\
     service ssh start && \
-    cloudflared tunnel --url ssh://localhost:22 --no-autoupdate"]
+    cloudflared tunnel --url ssh://localhost:2222 --no-autoupdate"]
