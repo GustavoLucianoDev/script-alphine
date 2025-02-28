@@ -1,7 +1,7 @@
 # Use uma imagem base do Ubuntu
 FROM ubuntu:20.04
 
-# Definir porta SSH
+# Definir porta SSH personalizada
 ARG SSH_PORT=2222
 
 # Instalar pacotes necessários
@@ -17,7 +17,7 @@ RUN curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/downloa
 # Definir senha para o usuário root
 RUN echo 'root:root' | chpasswd
 
-# Configurar SSH (usando porta configurável)
+# Configurar SSH (alterando a porta)
 RUN mkdir -p /var/run/sshd && \
     echo "PermitRootLogin yes" >> /etc/ssh/sshd_config && \
     echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
@@ -33,11 +33,11 @@ CMD ["/bin/bash", "-c", "\
     service ssh start && \
     netstat -tlnp | grep :${SSH_PORT} && \
     shellinaboxd -t -s '/:LOGIN' & \
-    echo 'Iniciando túnel SSH...' && \
-    cloudflared tunnel --no-autoupdate --token eyJhIjoiYTNmMjI3MzkxMTIwZGE5MzcyOTc5NTdmNmM1MDJhYWIiLCJ0IjoiZDM3NzYzZGMtMDk1ZC00NjNjLTlkMzgtOWFjNTk0Nzg0MmZjIiwicyI6Ik9UVmtOakZoTmpFdE5ETXlZeTAwTVdFekxUZ3pOMk10TkRGbE1tUXdOR1k1TlRBeiJ9 > /tmp/cloudflare_ssh.log 2>&1 & \
+    echo 'Iniciando túnel SSH no Cloudflare...' && \
+    cloudflared tunnel --no-autoupdate --url ssh://localhost:${SSH_PORT} --token eyJhIjoiYTNmMjI3MzkxMTIwZGE5MzcyOTc5NTdmNmM1MDJhYWIiLCJ0IjoiZDM3NzYzZGMtMDk1ZC00NjNjLTlkMzgtOWFjNTk0Nzg0MmZjIiwicyI6Ik9UVmtOakZoTmpFdE5ETXlZeTAwTVdFekxUZ3pOMk10TkRGbE1tUXdOR1k1TlRBeiJ9 > /tmp/cloudflare_ssh.log 2>&1 & \
     sleep 5 && \
     cat /tmp/cloudflare_ssh.log && \
-    echo 'Iniciando túnel WebShell...' && \
+    echo 'Iniciando túnel WebShell no Cloudflare...' && \
     cloudflared tunnel --no-autoupdate --url http://localhost:4200 > /tmp/cloudflare_web.log 2>&1 & \
     sleep 5 && \
     cat /tmp/cloudflare_web.log && \
