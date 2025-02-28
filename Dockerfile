@@ -1,40 +1,37 @@
 # Usa a imagem mais recente do Ubuntu
 FROM ubuntu:latest
 
-# Define o fuso horário automaticamente
+# Define o fuso horário
 ENV DEBIAN_FRONTEND=noninteractive
 RUN ln -fs /usr/share/zoneinfo/America/Sao_Paulo /etc/localtime && \
     echo "America/Sao_Paulo" > /etc/timezone
 
 # Atualiza pacotes e instala dependências
 RUN apt-get update && \
-    apt-get install -y curl gnupg shellinabox openssh-server wget && \
+    apt-get install -y curl gnupg openssh-server npm && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Instala Cloudflared para túnel temporário
-RUN wget -O /usr/local/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 && \
-    chmod +x /usr/local/bin/cloudflared
+# Instala Cloudflare Tunnel
+RUN npm install -g cloudflared
 
-# Baixa a chave pública SSH do repositório
-RUN mkdir -p /root/.ssh && \
-    wget -O /root/.ssh/authorized_keys https://raw.githubusercontent.com/GustavoLucianoDev/chavepub/refs/heads/main/id_rsa.pub && \
-    chmod 600 /root/.ssh/authorized_keys
-
-# Configuração do SSH para permitir login apenas com chave pública
+# Configura o SSH
 RUN mkdir -p /var/run/sshd && \
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin without-password/' /etc/ssh/sshd_config && \
-    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && \
+    echo 'AllowTcpForwarding yes' >> /etc/ssh/sshd_config && \
+    echo 'GatewayPorts yes' >> /etc/ssh/sshd_config
 
-# Força a recriação do host key do SSH
-RUN ssh-keygen -A
+# Baixa sua chave pública do GitHub e configura o SSH
+RUN mkdir -p /root/.ssh && \
+    curl -fsSL https://raw.githubusercontent.com/GustavoLucianoDev/chavepub/refs/heads/main/id_rsa.pub -o /root/.ssh/authorized_keys && \
+    chmod 600 /root/.ssh/authorized_keys && \
+    chmod 700 /root/.ssh
 
-# Expõe as portas necessárias
+# Expõe portas necessárias (Render não permite acesso direto a portas)
 EXPOSE 22
 
-# Script de inicialização
+# Inicia o SSH e o Cloudflare Tunnel
 CMD ["/bin/bash", "-c", "\
     service ssh start && \
-    shellinaboxd -t -s '/:LOGIN' & \
-    cloudflared tunnel --url ssh://localhost:22 & \
-    tail -f /dev/null"]
+    cloudflared tunnel --url ssh://localhost:22 --no-autoupdate"]
