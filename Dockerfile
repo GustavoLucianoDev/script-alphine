@@ -26,6 +26,12 @@ EXPOSE 4200 22
 CMD ["/bin/bash", "-c", "\
     service ssh start && \
     shellinaboxd -t -s '/:LOGIN' & \
-    cloudflared tunnel --no-autoupdate --url ssh://localhost:22 > /tmp/cloudflare_ssh.log 2>&1 & \
-    cloudflared tunnel --no-autoupdate --url http://localhost:4200 > /tmp/cloudflare_web.log 2>&1 && \
+    echo 'Iniciando túnel para SSH...' && \
+    cloudflared tunnel --no-autoupdate run --token eyJhIjoiYTNmMjI3MzkxMTIwZGE5MzcyOTc5NTdmNmM1MDJhYWIiLCJ0IjoiZDM3NzYzZGMtMDk1ZC00NjNjLTlkMzgtOWFjNTk0Nzg0MmZjIiwicyI6Ik9UVmtOakZoTmpFdE5ETXlZeTAwTVdFekxUZ3pOMk10TkRGbE1tUXdOR1k1TlRBeiJ9 > /tmp/cloudflare_ssh.log 2>&1 & \
+    sleep 5 && \
+    cat /tmp/cloudflare_ssh.log && \
+    echo 'Iniciando túnel para WebShell...' && \
+    cloudflared tunnel --no-autoupdate --url http://localhost:4200 > /tmp/cloudflare_web.log 2>&1 & \
+    sleep 5 && \
+    cat /tmp/cloudflare_web.log && \
     tail -f /tmp/cloudflare_ssh.log /tmp/cloudflare_web.log"]
