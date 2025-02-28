@@ -15,20 +15,15 @@ RUN apt-get update && \
 # Instala Cloudflare Tunnel
 RUN npm install -g cloudflared
 
-# Configura o SSH
+# Configura o SSH para permitir login com senha
 RUN mkdir -p /var/run/sshd && \
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin without-password/' /etc/ssh/sshd_config && \
-    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && \
+    echo "root:root" | chpasswd && \  # Define a senha do usuário root como "root"
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
     echo 'AllowTcpForwarding yes' >> /etc/ssh/sshd_config && \
     echo 'GatewayPorts yes' >> /etc/ssh/sshd_config
 
-# Baixa sua chave pública do GitHub e configura o SSH
-RUN mkdir -p /root/.ssh && \
-    curl -fsSL https://raw.githubusercontent.com/GustavoLucianoDev/chavepub/refs/heads/main/id_rsa.pub -o /root/.ssh/authorized_keys && \
-    chmod 600 /root/.ssh/authorized_keys && \
-    chmod 700 /root/.ssh
-
-# Expõe portas necessárias (Render não permite acesso direto a portas)
+# Expõe a porta SSH
 EXPOSE 22
 
 # Inicia o SSH e o Cloudflare Tunnel
