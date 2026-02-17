@@ -1,15 +1,14 @@
 FROM ubuntu:22.04
 
-# Variáveis de ambiente
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DISPLAY=:1
 ENV USER=user
 
-# Instalar desktop leve + VNC stack
+# Instalar Openbox + VNC stack leve
 RUN apt update && apt install -y \
-    xfce4 xfce4-goodies \
-    xvfb \
+    openbox \
     x11vnc \
+    xvfb \
     novnc \
     websockify \
     dbus-x11 \
@@ -25,23 +24,26 @@ RUN useradd -m -s /bin/bash user && \
 
 WORKDIR /home/user
 
-# Script de inicialização
+# Script de inicialização leve
 RUN echo '#!/bin/bash\n\
 export USER=user\n\
 export DISPLAY=:1\n\
+\n\
+# Limitar memória por processo (~500MB)\n\
+ulimit -v 500000\n\
 \n\
 # Iniciar X virtual\n\
 Xvfb :1 -screen 0 1024x768x16 &\n\
 XVFB_PID=$!\n\
 echo "Xvfb iniciado PID $XVFB_PID"\n\
 \n\
-# Iniciar XFCE\n\
-startxfce4 &\n\
-XFCE_PID=$!\n\
-echo "XFCE iniciado PID $XFCE_PID"\n\
+# Iniciar Openbox leve\n\
+openbox &\n\
+OPENBOX_PID=$!\n\
+echo "Openbox iniciado PID $OPENBOX_PID"\n\
 \n\
 # Espera até o display estar pronto\n\
-sleep 5\n\
+sleep 2\n\
 \n\
 # Iniciar x11vnc no background\n\
 x11vnc -display :1 -nopw -forever -shared &\n\
@@ -49,17 +51,13 @@ X11VNC_PID=$!\n\
 echo "x11vnc iniciado PID $X11VNC_PID"\n\
 \n\
 # Esperar até a porta 5900 estar aberta\n\
-while ! nc -z localhost 5900; do\n\
-  sleep 1\n\
-done\n\
+while ! nc -z localhost 5900; do sleep 1; done\n\
 echo "x11vnc pronto em localhost:5900"\n\
 \n\
 # Iniciar noVNC (foreground)\n\
 websockify --web=/usr/share/novnc/ 8080 localhost:5900\n\
 ' > /start.sh && chmod +x /start.sh
 
-# Expor porta para Render
 EXPOSE 8080
 
-# CMD principal
 CMD ["/start.sh"]
