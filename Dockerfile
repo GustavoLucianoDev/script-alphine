@@ -15,6 +15,7 @@ RUN apt update && apt install -y \
     dbus-x11 \
     sudo \
     wget curl \
+    netcat \
     && apt clean
 
 # Criar usuário
@@ -24,7 +25,7 @@ RUN useradd -m -s /bin/bash user && \
 
 WORKDIR /home/user
 
-# Copiar e criar script de inicialização
+# Script de inicialização
 RUN echo '#!/bin/bash\n\
 export USER=user\n\
 export DISPLAY=:1\n\
@@ -43,10 +44,17 @@ echo "XFCE iniciado PID $XFCE_PID"\n\
 sleep 5\n\
 \n\
 # Iniciar x11vnc no background\n\
-x11vnc -display :1 -nopw -forever -shared -bg\n\
-echo "x11vnc iniciado"\n\
+x11vnc -display :1 -nopw -forever -shared &\n\
+X11VNC_PID=$!\n\
+echo "x11vnc iniciado PID $X11VNC_PID"\n\
 \n\
-# Iniciar noVNC (processo principal, foreground)\n\
+# Esperar até a porta 5900 estar aberta\n\
+while ! nc -z localhost 5900; do\n\
+  sleep 1\n\
+done\n\
+echo "x11vnc pronto em localhost:5900"\n\
+\n\
+# Iniciar noVNC (foreground)\n\
 websockify --web=/usr/share/novnc/ 8080 localhost:5900\n\
 ' > /start.sh && chmod +x /start.sh
 
