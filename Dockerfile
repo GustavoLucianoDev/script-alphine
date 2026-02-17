@@ -4,7 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV DISPLAY=:1
 ENV USER=user
 
-# Instalar Openbox + VNC stack leve
+# Instalar pacotes leves
 RUN apt update && apt install -y \
     openbox \
     x11vnc \
@@ -15,6 +15,7 @@ RUN apt update && apt install -y \
     sudo \
     wget curl \
     netcat \
+    xterm \
     && apt clean
 
 # Criar usuário
@@ -24,7 +25,7 @@ RUN useradd -m -s /bin/bash user && \
 
 WORKDIR /home/user
 
-# Script de inicialização leve
+# Script de inicialização ultra leve
 RUN echo '#!/bin/bash\n\
 export USER=user\n\
 export DISPLAY=:1\n\
@@ -32,15 +33,18 @@ export DISPLAY=:1\n\
 # Limitar memória por processo (~500MB)\n\
 ulimit -v 500000\n\
 \n\
-# Iniciar X virtual\n\
-Xvfb :1 -screen 0 1024x768x16 &\n\
+# Iniciar X virtual com resolução menor\n\
+Xvfb :1 -screen 0 800x600x16 &\n\
 XVFB_PID=$!\n\
 echo "Xvfb iniciado PID $XVFB_PID"\n\
 \n\
-# Iniciar Openbox leve\n\
+# Iniciar Openbox puro\n\
 openbox &\n\
 OPENBOX_PID=$!\n\
 echo "Openbox iniciado PID $OPENBOX_PID"\n\
+\n\
+# Abrir um terminal mínimo para ver algo na tela\n\
+xterm &\n\
 \n\
 # Espera até o display estar pronto\n\
 sleep 2\n\
@@ -58,6 +62,7 @@ echo "x11vnc pronto em localhost:5900"\n\
 websockify --web=/usr/share/novnc/ 8080 localhost:5900\n\
 ' > /start.sh && chmod +x /start.sh
 
+# Porta do Render
 EXPOSE 8080
 
 CMD ["/start.sh"]
